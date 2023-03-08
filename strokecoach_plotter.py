@@ -223,7 +223,7 @@ def GetBBox(fname,stroke_slice=None,space=0):
 def PlotGPS(fname,stroke_slice=None,save=True):
 
     plt.style.use("/home/rms221/Documents/Compressive_Neural_Representations_Tensorflow/NeurComp_SourceCode/Auxiliary_Scripts/plot.mplstyle")  
-    params_plot = {'text.latex.preamble': [r'\usepackage{amsmath}',r'\usepackage{amssymb}'],'axes.grid': True}
+    params_plot = {'text.latex.preamble': [r'\usepackage{amsmath}',r'\usepackage{amssymb}'],'axes.grid': False}
     matplotlib.rcParams.update(params_plot) 
     
     space = 0.001
@@ -308,7 +308,9 @@ def PlotGraphsVsNStrokes(fname,stroke_slice=None,save=True):
     ax[2].plot(total_strokes,distance_per_stroke,color="g",marker="o",fillstyle="full",markerfacecolor="w")
     
     ax[0].set_xlim(total_strokes[0],total_strokes[-1])
-    ax[0].set_ylim(90,160)
+    ax[0].set_ylim(80,120)
+    ax[1].set_ylim(20,50)
+    ax[2].set_ylim(0,12)
     
     ax[-1].set_xlabel(r"Stroke Count [ - ]")
     
@@ -360,7 +362,9 @@ def PlotGraphsVsDistance(fname,stroke_slice=None,save=True):
     ax[2].plot(distance,distance_per_stroke,color="g",marker="o",fillstyle="full",markerfacecolor="w")
     
     ax[0].set_xlim(distance[0],distance[-1])
-    ax[0].set_ylim(90,160)
+    ax[0].set_ylim(80,120)
+    ax[1].set_ylim(20,50)
+    ax[2].set_ylim(0,12)
     
     ax[-1].set_xlabel(r"Distance [ metres ]")
     
@@ -385,18 +389,13 @@ def PlotGraphsVsDistance(fname,stroke_slice=None,save=True):
 
 #==============================================================================
 
-fname ="session_data/Toms Speedcoach 20230301 0617am.csv"
+fname ="session_data/Toms Speedcoach 20230307 0427pm.csv"
 
-
-
-# stroke_slice = (640,740)
-# stroke_slice = None
-
-stroke_slice = (100,300)
+stroke_slice = None
 
 PlotGPS(fname=fname,stroke_slice=stroke_slice,save=True)
-# PlotGraphsVsNStrokes(fname=fname,stroke_slice=stroke_slice,save=True)
-# PlotGraphsVsDistance(fname=fname,stroke_slice=stroke_slice,save=True)
+PlotGraphsVsNStrokes(fname=fname,stroke_slice=stroke_slice,save=True)
+PlotGraphsVsDistance(fname=fname,stroke_slice=stroke_slice,save=True)
 
 #==============================================================================
 
