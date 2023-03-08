@@ -150,7 +150,7 @@ text.parse_math                     : True
 # * LaTeX                                                                   
 # *****************************************************************************
 
-text.usetex                         : True  
+text.usetex                         : False  
 mathtext.fontset                    : cm                # Should be 'dejavusans' (default), 'dejavuserif', 'cm' (Computer Modern), 'stix', 'stixsans' or 'custom' (unsupported, may go away in the future)
 
 mathtext.bf                         : sans:bold
@@ -169,7 +169,7 @@ mathtext.default                    : it                # The default font to us
 axes.facecolor                      : white             # axes background color
 axes.edgecolor                      : black             # axes edge color
 axes.linewidth                      : 0.8               # edge line width
-axes.grid                           : False              # display grid or not
+axes.grid                           : False             # display grid or not
 axes.grid.axis                      : both              # which axis the grid should apply to
 axes.grid.which                     : major             # grid lines at {major, minor, both} ticks
 axes.titlelocation                  : center            # alignment of the title: {left, right, center}

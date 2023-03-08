@@ -41,9 +41,11 @@ def ReadSessionDateTime(fname):
     time_h = int(time_string[0:2])
     time_m = int(time_string[2:4])
     
+    if "pm" in fname: time_h = time_h + 12
+    
     session = datetime.datetime(date_y,date_m,date_d,time_h,time_m)
         
-    session_datetime = session.strftime("%a %d %b %Y - %H:%M %p")
+    session_datetime = session.strftime("%a %d %b %Y - %H:%M %p".format())
     
     return session_datetime
 
@@ -190,7 +192,7 @@ def GetMapFromBoundingBox(bbox):
     
 #==============================================================================
 
-def GetBBox(fname,stroke_slice=None,space=0):
+def GetBBox(fname,stroke_slice=None,padding=0):
     
     data = LoadRowingData(fname)
     
@@ -199,37 +201,86 @@ def GetBBox(fname,stroke_slice=None,space=0):
     else:
         indices = slice(0,(data["Total Strokes"].size -1))
         
-    lat = data["GPS Lat."]
-    lon = data["GPS Lon."]
+    lat = data["GPS Lat."][indices]
+    lon = data["GPS Lon."][indices]
     
-    lat_slice = lat[indices]
-    lon_slice = lon[indices]
+    lat_min,lat_max = lat.min(),lat.max()
+    lon_min,lon_max = lon.min(),lon.max()
     
-    lat_min,lat_max = lat_slice.min(),lat_slice.max()
-    lon_min,lon_max = lon_slice.min(),lon_slice.max()
-    
-    lat_avg = (lat_min+lat_max)/2
-    lon_avg = (lon_min+lon_max)/2
-    
-    print("Lat. Min: {:9.6f}, Max: {:9.6f}, Avg: {:9.6f}".format(lat_min,lat_max,lat_avg))
-    print("Lon. Min: {:9.6f}, Max: {:9.6f}, Avg: {:9.6f}".format(lon_min,lon_max,lon_avg))
-    
-    bbox = (lon_min-space,lon_max+space,lat_min-space,lat_max+space) 
+    bbox = (lon_min-padding,lon_max+padding,lat_min-padding,lat_max+padding) 
 
     return bbox
+
+#==============================================================================
+
+def GetStatistics(fname,stroke_slice):
+    
+    print("\nStatistics:\n")
+    
+    data = LoadRowingData(fname)
+    
+    if stroke_slice:
+        indices = slice(stroke_slice[0],stroke_slice[1]-1)
+    else:
+        indices = slice(0,(data["Total Strokes"].size -1))
+    
+    speed = data["Speed (GPS)"][indices]
+    min_speed = speed.min()
+    max_speed = speed.max()
+    avg_speed = np.average(speed)
+    
+    print("{} \t\t\t\t\t\t- Min: {:7.2f}, Max: {:7.2f}, Avg: {:7.2f}".format("Speed [m/s]",min_speed,max_speed,avg_speed))
+    
+    split = data["Split (GPS)"][indices]
+    min_split = split.min()
+    max_split = split.max()
+    avg_split = np.average(split)
+    
+    print("{} \t\t\t\t\t- Min: {:7.2f}, Max: {:7.2f}, Avg: {:7.2f}".format("Split [s/500m]",min_split,max_split,avg_split))
+    
+    stroke_rate = data["Stroke Rate"][indices]
+    min_stroke_rate = stroke_rate.min()
+    max_stroke_rate = stroke_rate.max()
+    avg_stroke_rate = np.average(stroke_rate)
+    
+    print("{} \t\t- Min: {:7.2f}, Max: {:7.2f}, Avg: {:7.2f}".format("Stroke Rate [strokes/minute]",min_stroke_rate,max_stroke_rate,avg_stroke_rate))
+    
+    distance_per_stroke = data["Distance/Stroke (GPS)"][indices]
+    min_distance_per_stroke = distance_per_stroke.min()
+    max_distance_per_stroke = distance_per_stroke.max()
+    avg_distance_per_stroke = np.average(distance_per_stroke)
+    
+    print("{} \t\t- Min: {:7.2f}, Max: {:7.2f}, Avg: {:7.2f}".format("Distance Per Stroke [metres]",min_distance_per_stroke,max_distance_per_stroke,avg_distance_per_stroke))
+
+    total_strokes = data["Total Strokes"][indices]
+    total_strokes = int(total_strokes[-1] - total_strokes[0])
+    
+    print("{} \t\t\t- {}".format("Total Number of Strokes",total_strokes))
+
+    distance = data["Distance (GPS)"][indices]
+    total_distance = distance[-1] - distance[0]
+    
+    print("{} \t- {:.2f}".format("Total Distance Rowed [metres]",total_distance))
+    
+    elapsed_time = data["Elapsed Time"][indices]
+    elapsed_time = elapsed_time[-1] - elapsed_time[0]
+    
+    print("{} \t\t- {:.2f}".format("Total Elapsed Time [seconds]",elapsed_time))
+    
+    return data
 
 #==============================================================================
 
 def PlotGPS(fname,stroke_slice=None,save=True):
 
     plt.style.use("/home/rms221/Documents/Compressive_Neural_Representations_Tensorflow/NeurComp_SourceCode/Auxiliary_Scripts/plot.mplstyle")  
-    params_plot = {'text.latex.preamble': [r'\usepackage{amsmath}',r'\usepackage{amssymb}'],'axes.grid': False}
+    params_plot = {"xtick.labelbottom":"False","xtick.top":"False","xtick.bottom":"False","ytick.labelleft":"False","ytick.left":"False","ytick.right":"False"}
     matplotlib.rcParams.update(params_plot) 
     
-    space = 0.001
+    padding = 0.001
     
     data = LoadRowingData(fname)
-    bbox = GetBBox(fname=fname,stroke_slice=stroke_slice,space=space)
+    bbox = GetBBox(fname=fname,stroke_slice=stroke_slice,padding=padding)
     my_map = GetMapFromBoundingBox(bbox=bbox)
     
     fig, ax = plt.subplots(nrows=1,ncols=1,figsize=(8,5),constrained_layout=False)
@@ -239,21 +290,17 @@ def PlotGPS(fname,stroke_slice=None,save=True):
     else:
         indices = slice(0,(data["Total Strokes"].size -1))
     
-    lat = data["GPS Lat."]
-    lon = data["GPS Lon."]
-    vel = data["Speed (GPS)"]
+    lat = data["GPS Lat."][indices]
+    lon = data["GPS Lon."][indices]
+    speed = data["Speed (GPS)"][indices]
+        
+    norm = plt.Normalize(speed.min(),speed.max())
     
-    lat_slice = lat[indices]
-    lon_slice = lon[indices]
-    vel_slice = vel[indices]
-    
-    norm = plt.Normalize(vel_slice.min(),vel_slice.max())
-    
-    gps_data = np.array([lon_slice,lat_slice]).T.reshape(-1, 1, 2)
+    gps_data = np.array([lon,lat]).T.reshape(-1, 1, 2)
     segments = np.concatenate([gps_data[:-1],gps_data[1:]],axis=1)
     line_collection = LineCollection(segments,cmap='plasma',norm=norm,path_effects=[path_effects.Stroke(capstyle="round")],linewidth=3)
         
-    line_collection.set_array(vel_slice)
+    line_collection.set_array(speed)
     line_collection.set_linewidth(2)
     line = ax.add_collection(line_collection)
 
@@ -264,15 +311,15 @@ def PlotGPS(fname,stroke_slice=None,save=True):
     
     ax.imshow(my_map,extent=(bbox))
     
-    ax.set_xlim(lon_slice.min()-space,lon_slice.max()+space)
-    ax.set_ylim(lat_slice.min()-space,lat_slice.max()+space)
-    ax.set_xlabel(r"Longitude  [deg.]")
-    ax.set_ylabel(r"Latitude  [deg.]")
+    ax.set_xlim(lon.min()-padding,lon.max()+padding)
+    ax.set_ylim(lat.min()-padding,lat.max()+padding)
     
     ax.set_aspect('equal')
     
     session_datetime = ReadSessionDateTime(fname)
     session_savename = session_datetime.replace(":","").replace(" - "," ").replace(" ","_").lower() + "_gps.png"
+        
+    ax.set_title(session_datetime)
     
     if save:
         savename = os.path.join(os.getcwd(),"session_graphs",session_savename)
@@ -283,7 +330,7 @@ def PlotGPS(fname,stroke_slice=None,save=True):
 
 #==============================================================================
 
-def PlotGraphsVsNStrokes(fname,stroke_slice=None,save=True):
+def PlotGraphsVsNStrokes(fname,stroke_slice=None,split_bounds=None,stroke_rate_bounds=None,distance_per_stroke_bounds=None,save=True):
     
     plt.style.use("plot.mplstyle")      
     params_plot = {'text.latex.preamble': [r'\usepackage{amsmath}',r'\usepackage{amssymb}'],'axes.grid': True}
@@ -300,17 +347,29 @@ def PlotGraphsVsNStrokes(fname,stroke_slice=None,save=True):
     stroke_rate = data["Stroke Rate"][indices]
     total_strokes = data["Total Strokes"][indices]
     distance_per_stroke = data["Distance/Stroke (GPS)"][indices]
-    
+
     fig, ax = plt.subplots(nrows=3,ncols=1,figsize=(30,10),constrained_layout=False,sharex=True)
  
     ax[0].plot(total_strokes,split              ,color="b",marker="s",fillstyle="full",markerfacecolor="w")
     ax[1].plot(total_strokes,stroke_rate        ,color="r",marker="o",fillstyle="full",markerfacecolor="w")
-    ax[2].plot(total_strokes,distance_per_stroke,color="g",marker="o",fillstyle="full",markerfacecolor="w")
+    ax[2].plot(total_strokes,distance_per_stroke,color="g",marker="o",fillstyle="full",markerfacecolor="w")    
     
     ax[0].set_xlim(total_strokes[0],total_strokes[-1])
-    ax[0].set_ylim(80,120)
-    ax[1].set_ylim(20,50)
-    ax[2].set_ylim(0,12)
+    
+    if split_bounds:
+        ax[0].set_ylim(split_bounds[0],split_bounds[1])
+    else:
+        ax[0].set_ylim(80,120)
+        
+    if stroke_rate_bounds:
+        ax[1].set_ylim(stroke_rate_bounds[0],stroke_rate_bounds[1])
+    else:
+        ax[1].set_ylim(20,50)
+        
+    if distance_per_stroke_bounds:
+        ax[2].set_ylim(distance_per_stroke_bounds[0],distance_per_stroke_bounds[1])
+    else:
+        ax[2].set_ylim(0,12)
     
     ax[-1].set_xlabel(r"Stroke Count [ - ]")
     
@@ -326,6 +385,8 @@ def PlotGraphsVsNStrokes(fname,stroke_slice=None,save=True):
     session_datetime = ReadSessionDateTime(fname)
     session_savename = session_datetime.replace(":","").replace(" - "," ").replace(" ","_").lower() + "_analysis1.png"
     
+    ax[0].set_title(session_datetime)
+    
     if save:
         savename = os.path.join(os.getcwd(),"session_graphs",session_savename)
         plt.savefig(savename)
@@ -337,7 +398,7 @@ def PlotGraphsVsNStrokes(fname,stroke_slice=None,save=True):
 
 #==============================================================================
 
-def PlotGraphsVsDistance(fname,stroke_slice=None,save=True):
+def PlotGraphsVsDistance(fname,stroke_slice=None,split_bounds=None,stroke_rate_bounds=None,distance_per_stroke_bounds=None,save=True):
     
     plt.style.use("plot.mplstyle")  
     params_plot = {'text.latex.preamble': [r'\usepackage{amsmath}',r'\usepackage{amssymb}'],'axes.grid': True}
@@ -362,10 +423,22 @@ def PlotGraphsVsDistance(fname,stroke_slice=None,save=True):
     ax[2].plot(distance,distance_per_stroke,color="g",marker="o",fillstyle="full",markerfacecolor="w")
     
     ax[0].set_xlim(distance[0],distance[-1])
-    ax[0].set_ylim(80,120)
-    ax[1].set_ylim(20,50)
-    ax[2].set_ylim(0,12)
     
+    if split_bounds:
+        ax[0].set_ylim(split_bounds[0],split_bounds[1])
+    else:
+        ax[0].set_ylim(80,120)
+        
+    if stroke_rate_bounds:
+        ax[1].set_ylim(stroke_rate_bounds[0],stroke_rate_bounds[1])
+    else:
+        ax[1].set_ylim(20,50)
+        
+    if distance_per_stroke_bounds:
+        ax[2].set_ylim(distance_per_stroke_bounds[0],distance_per_stroke_bounds[1])
+    else:
+        ax[2].set_ylim(0,12)
+        
     ax[-1].set_xlabel(r"Distance [ metres ]")
     
     ax[0].set_ylabel(r"Split (GPS) [ minutes : seconds ]",color="b",labelpad=10)
@@ -380,23 +453,30 @@ def PlotGraphsVsDistance(fname,stroke_slice=None,save=True):
     session_datetime = ReadSessionDateTime(fname)
     session_savename = session_datetime.replace(":","").replace(" - "," ").replace(" ","_").lower() + "_analysis2.png"
     
+    ax[0].set_title(session_datetime)
+    
     if save:
         savename = os.path.join(os.getcwd(),"session_graphs",session_savename)
         plt.savefig(savename)
     else: pass
 
     plt.show()
+    
+    return None
 
 #==============================================================================
-
+# For Lent Bumps M1 Day1
 fname ="session_data/Toms Speedcoach 20230307 0427pm.csv"
-
-stroke_slice = None
-
-PlotGPS(fname=fname,stroke_slice=stroke_slice,save=True)
-PlotGraphsVsNStrokes(fname=fname,stroke_slice=stroke_slice,save=True)
-PlotGraphsVsDistance(fname=fname,stroke_slice=stroke_slice,save=True)
-
+stroke_slice = (3,-25)
+split_bounds = (80,120)
+stroke_rate_bounds = (30,50)
+distance_per_stroke_bounds = (0,12)
+#==============================================================================
+save=True
+x= GetStatistics(fname=fname,stroke_slice=stroke_slice)
+# PlotGPS(fname=fname,stroke_slice=stroke_slice,save=save)
+# PlotGraphsVsNStrokes(fname=fname,stroke_slice=stroke_slice,split_bounds=split_bounds,stroke_rate_bounds=stroke_rate_bounds,distance_per_stroke_bounds=distance_per_stroke_bounds,save=save)
+# PlotGraphsVsDistance(fname=fname,stroke_slice=stroke_slice,split_bounds=split_bounds,stroke_rate_bounds=stroke_rate_bounds,distance_per_stroke_bounds=distance_per_stroke_bounds,save=save)
 #==============================================================================
 
 
