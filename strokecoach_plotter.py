@@ -15,7 +15,6 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 def LoadRowingData(fname):
 
     names = np.genfromtxt(fname=fname,dtype=str,delimiter=",",skip_header=28,usecols=(1,3,4,5,8,9,10,22,23))[0]
-    units = np.genfromtxt(fname=fname,dtype=str,delimiter=",",skip_header=29,usecols=(1,3,4,5,8,9,10,22,23))[0]
     value = np.genfromtxt(fname=fname,dtype=str,delimiter=",",skip_header=30,usecols=(1,3,4,5,8,9,10,22,23))
     
     data = {}
@@ -48,6 +47,14 @@ def ReadSessionDateTime(fname):
     session_datetime = session.strftime("%a %d %b %Y - %H:%M %p".format())
     
     return session_datetime
+
+#==============================================================================
+
+def SecondsToSplitTime(seconds):
+    
+    import datetime
+    
+    str(datetime.timedelta(seconds=seconds))
 
 #==============================================================================
     
@@ -121,21 +128,18 @@ def PixToLat(y,zoom):
 # Obtain the map for the provided bounding box
 def GetMapFromBoundingBox(bbox):
     
-    # The API token from https://www.mapbox.com/api-documentation/maps/#static
-    token = "pk.eyJ1IjoiYnVzeWJ1cyIsImEiOiJjanF4cXNoNmEwOG1yNDNycGw5bTByc3g5In0.flzpO633oGAY5aa-RQa4Ow"
-
     # The region of interest in latitude and longitude geo-coordinates
     bbox_lon_min,bbox_lon_max,bbox_lat_min,bbox_lat_max = bbox
 
     # Rendered image map size in pixels as it should come from MapBox
-    w,h = 1024,1024
+    w,h = 1280,1280
 
     # The mid-point of the region of interest
     lon = round(np.average([bbox_lon_min,bbox_lon_max]),5)
     lat = round(np.average([bbox_lat_min,bbox_lat_max]),5)
 
     # Look for appropriate zoom level to cover the region of interest
-    for zoom in range(16,0,-1):
+    for zoom in range(20,0,-1):
         
         # Center point in pixel coordinates at the current zoom level
         x = LonToPix(lon=lon,zoom=zoom)
@@ -156,23 +160,25 @@ def GetMapFromBoundingBox(bbox):
                 break
             else: pass
         else: pass
-    ##          
-        
-    # Collect all parameters
+    ##
+    
+    # Collect all parameters (google maps)
     params = {
-        'style'     : "streets-v12",
-        'lat'       : lat,
+        'maptype'   : "satellite",
         'lon'       : lon,
-        'token'     : token,
+        'lat'       : lat,
+        'key'       : "AIzaSyCp_nhzj8Ip3xglgs0ZZ_az8cPx5dutu4A",
         'zoom'      : zoom,
         'w'         : w,
         'h'         : h,
-        'retina'    : "@2x"
+        'format'    : "png",
+        'style'     : "feature:poi|visibility:off"
         }
 
-    url_template = "https://api.mapbox.com/styles/v1/mapbox/{style}/static/{lon},{lat},{zoom}/{w}x{h}{retina}?access_token={token}&attribution=false&logo=false"
+    url_template = "https://maps.googleapis.com/maps/api/staticmap?center={lat},{lon}&zoom={zoom}&size={w}x{h}&scale=2&format={format}&maptype={maptype}&style={style}&key={key}"
+    
     url = url_template.format(**params)
-
+    
     # Download the rendered image
     with urllib.request.urlopen(url) as response:
         whole_map = Image.open(io.BytesIO(response.read()))
@@ -213,9 +219,7 @@ def GetBBox(fname,stroke_slice=None,padding=0):
 
 #==============================================================================
 
-def GetStatistics(fname,stroke_slice):
-    
-    print("\nStatistics:\n")
+def GetStatisticsSummary(fname,stroke_slice):
     
     data = LoadRowingData(fname)
     
@@ -224,66 +228,56 @@ def GetStatistics(fname,stroke_slice):
     else:
         indices = slice(0,(data["Total Strokes"].size -1))
     
-    speed = data["Speed (GPS)"][indices]
-    min_speed = speed.min()
-    max_speed = speed.max()
-    avg_speed = np.average(speed)
+    total_strokes = data["Total Strokes"][indices]
+    print("\nTOTAL STROKES (-): {}".format(int(total_strokes[-1] - total_strokes[0])))
     
-    print("{} \t\t\t\t\t\t- Min: {:7.2f}, Max: {:7.2f}, Avg: {:7.2f}".format("Speed [m/s]",min_speed,max_speed,avg_speed))
+    distance = data["Distance (GPS)"][indices]
+    print("\nTOTAL DISTANCE (METRES): {:.2f}".format((distance[-1] - distance[0])))
+
+    elapsed_time = data["Elapsed Time"][indices]
+    print("\nTOTAL TIME (SECONDS): {:.2f}".format((elapsed_time[-1] - elapsed_time[0])))
+    
+    speed = data["Speed (GPS)"][indices]
+    print("\nSPEED (METRES PER SECOND):")
+    print("Min: {:7.2f}".format(speed.min()))
+    print("Max: {:7.2f}".format(speed.max()))
+    print("Avg: {:7.2f}".format(np.average(speed)))
     
     split = data["Split (GPS)"][indices]
-    min_split = split.min()
-    max_split = split.max()
-    avg_split = np.average(split)
-    
-    print("{} \t\t\t\t\t- Min: {:7.2f}, Max: {:7.2f}, Avg: {:7.2f}".format("Split [s/500m]",min_split,max_split,avg_split))
+    print("\nSPLIT (SECONDS):")
+    print("Min: {:7.2f}".format(split.min()))
+    print("Max: {:7.2f}".format(split.max()))
+    print("Avg: {:7.2f}".format(np.average(split)))
     
     stroke_rate = data["Stroke Rate"][indices]
-    min_stroke_rate = stroke_rate.min()
-    max_stroke_rate = stroke_rate.max()
-    avg_stroke_rate = np.average(stroke_rate)
-    
-    print("{} \t\t- Min: {:7.2f}, Max: {:7.2f}, Avg: {:7.2f}".format("Stroke Rate [strokes/minute]",min_stroke_rate,max_stroke_rate,avg_stroke_rate))
+    print("\nSTROKE RATE (STROKES PER MINUTE):")
+    print("Min: {:7.2f}".format(stroke_rate.min()))
+    print("Max: {:7.2f}".format(stroke_rate.max()))
+    print("Avg: {:7.2f}".format(np.average(stroke_rate)))
     
     distance_per_stroke = data["Distance/Stroke (GPS)"][indices]
-    min_distance_per_stroke = distance_per_stroke.min()
-    max_distance_per_stroke = distance_per_stroke.max()
-    avg_distance_per_stroke = np.average(distance_per_stroke)
+    print("\nDISTANCE PER STROKE (METRES)")
+    print("Min: {:7.2f}".format(distance_per_stroke.min()))
+    print("Max: {:7.2f}".format(distance_per_stroke.max()))
+    print("Avg: {:7.2f}".format(np.average(distance_per_stroke)))
     
-    print("{} \t\t- Min: {:7.2f}, Max: {:7.2f}, Avg: {:7.2f}".format("Distance Per Stroke [metres]",min_distance_per_stroke,max_distance_per_stroke,avg_distance_per_stroke))
-
-    total_strokes = data["Total Strokes"][indices]
-    total_strokes = int(total_strokes[-1] - total_strokes[0])
-    
-    print("{} \t\t\t- {}".format("Total Number of Strokes",total_strokes))
-
-    distance = data["Distance (GPS)"][indices]
-    total_distance = distance[-1] - distance[0]
-    
-    print("{} \t- {:.2f}".format("Total Distance Rowed [metres]",total_distance))
-    
-    elapsed_time = data["Elapsed Time"][indices]
-    elapsed_time = elapsed_time[-1] - elapsed_time[0]
-    
-    print("{} \t\t- {:.2f}".format("Total Elapsed Time [seconds]",elapsed_time))
-    
-    return data
+    return None
 
 #==============================================================================
 
 def PlotGPS(fname,stroke_slice=None,save=True):
 
-    plt.style.use("/home/rms221/Documents/Compressive_Neural_Representations_Tensorflow/NeurComp_SourceCode/Auxiliary_Scripts/plot.mplstyle")  
+    plt.style.use("plot.mplstyle")   
     params_plot = {"xtick.labelbottom":"False","xtick.top":"False","xtick.bottom":"False","ytick.labelleft":"False","ytick.left":"False","ytick.right":"False"}
     matplotlib.rcParams.update(params_plot) 
     
-    padding = 0.001
+    padding = 0.0005
     
     data = LoadRowingData(fname)
     bbox = GetBBox(fname=fname,stroke_slice=stroke_slice,padding=padding)
     my_map = GetMapFromBoundingBox(bbox=bbox)
     
-    fig, ax = plt.subplots(nrows=1,ncols=1,figsize=(8,5),constrained_layout=False)
+    fig, ax = plt.subplots(nrows=1,ncols=1,figsize=(8,5),constrained_layout=True)
     
     if stroke_slice:
         indices = slice(stroke_slice[0],stroke_slice[1]-1)
@@ -301,13 +295,13 @@ def PlotGPS(fname,stroke_slice=None,save=True):
     line_collection = LineCollection(segments,cmap='plasma',norm=norm,path_effects=[path_effects.Stroke(capstyle="round")],linewidth=3)
         
     line_collection.set_array(speed)
-    line_collection.set_linewidth(2)
+    line_collection.set_linewidth(3)
     line = ax.add_collection(line_collection)
 
     the_divider = make_axes_locatable(ax)
-    color_axis = the_divider.append_axes("right", size="5%", pad=0.1)
-    cbar = plt.colorbar(line, cax=color_axis)
-    cbar.set_label('Boat Speed [$m/s$]')
+    color_axis = the_divider.append_axes("right",size="5%",pad=0.1)
+    cbar = plt.colorbar(line,cax=color_axis)
+    cbar.set_label('Boat Speed [m/s]',labelpad=8)
     
     ax.imshow(my_map,extent=(bbox))
     
@@ -332,8 +326,8 @@ def PlotGPS(fname,stroke_slice=None,save=True):
 
 def PlotGraphsVsNStrokes(fname,stroke_slice=None,split_bounds=None,stroke_rate_bounds=None,distance_per_stroke_bounds=None,save=True):
     
-    plt.style.use("plot.mplstyle")      
-    params_plot = {'text.latex.preamble': [r'\usepackage{amsmath}',r'\usepackage{amssymb}'],'axes.grid': True}
+    plt.style.use("plot.mplstyle")   
+    params_plot = {'axes.grid': True}
     matplotlib.rcParams.update(params_plot) 
     
     data = LoadRowingData(fname)
@@ -375,7 +369,7 @@ def PlotGraphsVsNStrokes(fname,stroke_slice=None,split_bounds=None,stroke_rate_b
     
     ax[0].set_ylabel(r"Split (GPS) [ minutes : seconds ]",color="b",labelpad=10)
     ax[1].set_ylabel(r"Stroke Rate [ strokes / minute ]" ,color="r",labelpad=10)
-    ax[2].set_ylabel(r"Disance Per Stroke [ metres / - ]",color="g",labelpad=10)
+    ax[2].set_ylabel(r"Disance Per Stroke [ metres ]"    ,color="g",labelpad=10)
     
     formatter = matplotlib.ticker.FuncFormatter(lambda s, x: time.strftime('%M:%S', time.gmtime(s)))
     ax[0].yaxis.set_major_formatter(formatter)
@@ -399,9 +393,9 @@ def PlotGraphsVsNStrokes(fname,stroke_slice=None,split_bounds=None,stroke_rate_b
 #==============================================================================
 
 def PlotGraphsVsDistance(fname,stroke_slice=None,split_bounds=None,stroke_rate_bounds=None,distance_per_stroke_bounds=None,save=True):
-    
-    plt.style.use("plot.mplstyle")  
-    params_plot = {'text.latex.preamble': [r'\usepackage{amsmath}',r'\usepackage{amssymb}'],'axes.grid': True}
+     
+    plt.style.use("plot.mplstyle")   
+    params_plot = {'axes.grid': True}
     matplotlib.rcParams.update(params_plot) 
     
     data = LoadRowingData(fname)
@@ -443,7 +437,7 @@ def PlotGraphsVsDistance(fname,stroke_slice=None,split_bounds=None,stroke_rate_b
     
     ax[0].set_ylabel(r"Split (GPS) [ minutes : seconds ]",color="b",labelpad=10)
     ax[1].set_ylabel(r"Stroke Rate [ strokes / minute ]" ,color="r",labelpad=10)
-    ax[2].set_ylabel(r"Disance Per Stroke [ metres / - ]",color="g",labelpad=10)
+    ax[2].set_ylabel(r"Disance Per Stroke [ metres ]"    ,color="g",labelpad=10)
     
     formatter = matplotlib.ticker.FuncFormatter(lambda s, x: time.strftime('%M:%S', time.gmtime(s)))
     ax[0].yaxis.set_major_formatter(formatter)
@@ -466,17 +460,27 @@ def PlotGraphsVsDistance(fname,stroke_slice=None,split_bounds=None,stroke_rate_b
 
 #==============================================================================
 # For Lent Bumps M1 Day1
-fname ="session_data/Toms Speedcoach 20230307 0427pm.csv"
-stroke_slice = (3,-25)
-split_bounds = (80,120)
-stroke_rate_bounds = (30,50)
-distance_per_stroke_bounds = (0,12)
+# fname ="session_data/Toms Speedcoach 20230307 0427pm.csv"
+# stroke_slice = (3,-25)
+
+# For Lent Bumps M1 Day2
+# fname ="session_data/Toms Speedcoach 20230309 0244pm.csv"
+# stroke_slice = None
+
+# For Lent Bumps M1 Day4
+fname ="session_data/Toms Speedcoach 20230311 0244pm.csv"
+stroke_slice = None
+
+#==============================================================================
+split_bounds                = (80,120)
+stroke_rate_bounds          = (30,50)
+distance_per_stroke_bounds  = (0,12)
 #==============================================================================
 save=True
-x= GetStatistics(fname=fname,stroke_slice=stroke_slice)
-# PlotGPS(fname=fname,stroke_slice=stroke_slice,save=save)
-# PlotGraphsVsNStrokes(fname=fname,stroke_slice=stroke_slice,split_bounds=split_bounds,stroke_rate_bounds=stroke_rate_bounds,distance_per_stroke_bounds=distance_per_stroke_bounds,save=save)
-# PlotGraphsVsDistance(fname=fname,stroke_slice=stroke_slice,split_bounds=split_bounds,stroke_rate_bounds=stroke_rate_bounds,distance_per_stroke_bounds=distance_per_stroke_bounds,save=save)
+GetStatisticsSummary(fname=fname,stroke_slice=stroke_slice)
+PlotGPS(fname=fname,stroke_slice=stroke_slice,save=save)
+PlotGraphsVsNStrokes(fname=fname,stroke_slice=stroke_slice,split_bounds=split_bounds,stroke_rate_bounds=stroke_rate_bounds,distance_per_stroke_bounds=distance_per_stroke_bounds,save=save)
+PlotGraphsVsDistance(fname=fname,stroke_slice=stroke_slice,split_bounds=split_bounds,stroke_rate_bounds=stroke_rate_bounds,distance_per_stroke_bounds=distance_per_stroke_bounds,save=save)
 #==============================================================================
 
 
