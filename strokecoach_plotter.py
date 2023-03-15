@@ -162,6 +162,8 @@ def GetMapFromBoundingBox(bbox):
         else: pass
     ##
     
+    # AIzaSyCp_ - nhzj8Ip3xglgs0ZZ_ - az8cPx5dutu4A
+    
     # Collect all parameters (google maps)
     params = {
         'maptype'   : "satellite",
