@@ -167,7 +167,7 @@ def GetMapFromBoundingBox(bbox):
         'maptype'   : "satellite",
         'lon'       : lon,
         'lat'       : lat,
-        'key'       : "AIzaSyCp_nhzj8Ip3xglgs0ZZ_az8cPx5dutu4A",
+        'key'       : "",
         'zoom'      : zoom,
         'w'         : w,
         'h'         : h,
