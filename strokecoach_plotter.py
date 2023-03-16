@@ -8,6 +8,7 @@ import matplotlib.patheffects as path_effects
 import urllib.request
 
 from PIL import Image
+from matplotlib.gridspec import GridSpec
 from matplotlib.collections import LineCollection
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
@@ -169,7 +170,7 @@ def GetMapFromBoundingBox(bbox):
         'maptype'   : "satellite",
         'lon'       : lon,
         'lat'       : lat,
-        'key'       : "",
+        'key'       : "AIzaSyCp_nhzj8Ip3xglgs0ZZ_az8cPx5dutu4A",
         'zoom'      : zoom,
         'w'         : w,
         'h'         : h,
@@ -343,45 +344,67 @@ def PlotGraphsVsNStrokes(fname,stroke_slice=None,split_bounds=None,stroke_rate_b
     stroke_rate = data["Stroke Rate"][indices]
     total_strokes = data["Total Strokes"][indices]
     distance_per_stroke = data["Distance/Stroke (GPS)"][indices]
-
-    fig, ax = plt.subplots(nrows=3,ncols=1,figsize=(30,10),constrained_layout=False,sharex=True)
- 
-    ax[0].plot(total_strokes,split              ,color="b",marker="s",fillstyle="full",markerfacecolor="w")
-    ax[1].plot(total_strokes,stroke_rate        ,color="r",marker="o",fillstyle="full",markerfacecolor="w")
-    ax[2].plot(total_strokes,distance_per_stroke,color="g",marker="o",fillstyle="full",markerfacecolor="w")    
     
-    ax[0].set_xlim(total_strokes[0],total_strokes[-1])
+    fig = plt.figure(figsize=(30,10),constrained_layout=True)
+    
+    gridspec = fig.add_gridspec(nrows=3,ncols=2,height_ratios=[1,1,1], width_ratios=[1,0.1])
+    
+    
+    ax_0_0 = fig.add_subplot(gridspec[0,0])
+    ax_0_0.plot(total_strokes,split              ,color="b",marker="s",fillstyle="full",markerfacecolor="w")
     
     if split_bounds:
-        ax[0].set_ylim(split_bounds[0],split_bounds[1])
+        ax_0_0.set_ylim(split_bounds[0],split_bounds[1])
     else:
-        ax[0].set_ylim(80,120)
+        ax_0_0.set_ylim(80,120)
         
+    ax_0_1 = fig.add_subplot(gridspec[0,1],sharey=ax_0_0)
+    ax_0_1.hist(split              ,bins=20,color="b",orientation='horizontal',range=(split_bounds[0],split_bounds[1]))
+    ax_0_1.axes.yaxis.set_visible(False)
+        
+    ax_1_0 = fig.add_subplot(gridspec[1,0],sharex=ax_0_0)
+    ax_1_0.plot(total_strokes,stroke_rate        ,color="r",marker="s",fillstyle="full",markerfacecolor="w")
+    
     if stroke_rate_bounds:
-        ax[1].set_ylim(stroke_rate_bounds[0],stroke_rate_bounds[1])
+        ax_1_0.set_ylim(stroke_rate_bounds[0],stroke_rate_bounds[1])
     else:
-        ax[1].set_ylim(20,50)
+        ax_1_0.set_ylim(20,50)
         
+    ax_1_1 = fig.add_subplot(gridspec[1,1],sharey=ax_1_0)
+    ax_1_1.hist(stroke_rate        ,bins=20,color="r",orientation='horizontal',range=(stroke_rate_bounds[0],stroke_rate_bounds[1]))
+    ax_1_1.axes.yaxis.set_visible(False)
+    
+    ax_2_0 = fig.add_subplot(gridspec[2,0],sharex=ax_0_0)
+    ax_2_0.plot(total_strokes,distance_per_stroke,color="g",marker="s",fillstyle="full",markerfacecolor="w")    
+    
     if distance_per_stroke_bounds:
-        ax[2].set_ylim(distance_per_stroke_bounds[0],distance_per_stroke_bounds[1])
+        ax_2_0.set_ylim(distance_per_stroke_bounds[0],distance_per_stroke_bounds[1])
     else:
-        ax[2].set_ylim(0,12)
+        ax_2_0.set_ylim(0,12)
+        
+    ax_2_1 = fig.add_subplot(gridspec[2,1],sharey=ax_2_0)
+    ax_2_1.hist(distance_per_stroke,bins=20,color="g",orientation='horizontal',range=(distance_per_stroke_bounds[0],distance_per_stroke_bounds[1]))
+    ax_2_1.axes.yaxis.set_visible(False)
     
-    ax[-1].set_xlabel(r"Stroke Count [ - ]")
+    ax_0_0.set_xlim(total_strokes[0],total_strokes[-1])
+    ax_1_0.set_xlim(total_strokes[0],total_strokes[-1])
+    ax_2_0.set_xlim(total_strokes[0],total_strokes[-1])    
     
-    ax[0].set_ylabel(r"Split (GPS) [ minutes : seconds ]",color="b",labelpad=10)
-    ax[1].set_ylabel(r"Stroke Rate [ strokes / minute ]" ,color="r",labelpad=10)
-    ax[2].set_ylabel(r"Disance Per Stroke [ metres ]"    ,color="g",labelpad=10)
+    ax_2_0.set_xlabel(r"Stroke Count [ - ]")
+    
+    ax_0_0.set_ylabel(r"Split (GPS) [ minutes : seconds ]",color="b",labelpad=10)
+    ax_1_0.set_ylabel(r"Stroke Rate [ strokes / minute ]" ,color="r",labelpad=10)
+    ax_2_0.set_ylabel(r"Disance Per Stroke [ metres ]"    ,color="g",labelpad=10)
     
     formatter = matplotlib.ticker.FuncFormatter(lambda s, x: time.strftime('%M:%S', time.gmtime(s)))
-    ax[0].yaxis.set_major_formatter(formatter)
+    ax_0_0.yaxis.set_major_formatter(formatter)
     
     fig.align_ylabels()
     
     session_datetime = ReadSessionDateTime(fname)
     session_savename = session_datetime.replace(":","").replace(" - "," ").replace(" ","_").lower() + "_analysis1.png"
     
-    ax[0].set_title(session_datetime)
+    ax_0_0.set_title(session_datetime)
     
     if save:
         savename = os.path.join(os.getcwd(),"session_graphs",session_savename)
@@ -412,44 +435,66 @@ def PlotGraphsVsDistance(fname,stroke_slice=None,split_bounds=None,stroke_rate_b
     stroke_rate = data["Stroke Rate"][indices]
     distance_per_stroke = data["Distance/Stroke (GPS)"][indices]
     
-    fig, ax = plt.subplots(nrows=3,ncols=1,figsize=(30,10),constrained_layout=False,sharex=True)
- 
-    ax[0].plot(distance,split              ,color="b",marker="s",fillstyle="full",markerfacecolor="w")
-    ax[1].plot(distance,stroke_rate        ,color="r",marker="o",fillstyle="full",markerfacecolor="w")
-    ax[2].plot(distance,distance_per_stroke,color="g",marker="o",fillstyle="full",markerfacecolor="w")
+    fig = plt.figure(figsize=(30,10),constrained_layout=True)
     
-    ax[0].set_xlim(distance[0],distance[-1])
+    gridspec = fig.add_gridspec(nrows=3,ncols=2,height_ratios=[1,1,1], width_ratios=[1,0.1])
+    
+    
+    ax_0_0 = fig.add_subplot(gridspec[0,0])
+    ax_0_0.plot(distance,split              ,color="b",marker="s",fillstyle="full",markerfacecolor="w")
     
     if split_bounds:
-        ax[0].set_ylim(split_bounds[0],split_bounds[1])
+        ax_0_0.set_ylim(split_bounds[0],split_bounds[1])
     else:
-        ax[0].set_ylim(80,120)
+        ax_0_0.set_ylim(80,120)
         
-    if stroke_rate_bounds:
-        ax[1].set_ylim(stroke_rate_bounds[0],stroke_rate_bounds[1])
-    else:
-        ax[1].set_ylim(20,50)
+    ax_0_1 = fig.add_subplot(gridspec[0,1],sharey=ax_0_0)
+    ax_0_1.hist(split              ,bins=20,color="b",orientation='horizontal',range=(split_bounds[0],split_bounds[1]))
+    ax_0_1.axes.yaxis.set_visible(False)
         
-    if distance_per_stroke_bounds:
-        ax[2].set_ylim(distance_per_stroke_bounds[0],distance_per_stroke_bounds[1])
-    else:
-        ax[2].set_ylim(0,12)
-        
-    ax[-1].set_xlabel(r"Distance [ metres ]")
+    ax_1_0 = fig.add_subplot(gridspec[1,0],sharex=ax_0_0)
+    ax_1_0.plot(distance,stroke_rate        ,color="r",marker="s",fillstyle="full",markerfacecolor="w")
     
-    ax[0].set_ylabel(r"Split (GPS) [ minutes : seconds ]",color="b",labelpad=10)
-    ax[1].set_ylabel(r"Stroke Rate [ strokes / minute ]" ,color="r",labelpad=10)
-    ax[2].set_ylabel(r"Disance Per Stroke [ metres ]"    ,color="g",labelpad=10)
+    if stroke_rate_bounds:
+        ax_1_0.set_ylim(stroke_rate_bounds[0],stroke_rate_bounds[1])
+    else:
+        ax_1_0.set_ylim(20,50)
+        
+    ax_1_1 = fig.add_subplot(gridspec[1,1],sharey=ax_1_0)
+    ax_1_1.hist(stroke_rate        ,bins=20,color="r",orientation='horizontal',range=(stroke_rate_bounds[0],stroke_rate_bounds[1]))
+    ax_1_1.axes.yaxis.set_visible(False)
+    
+    ax_2_0 = fig.add_subplot(gridspec[2,0],sharex=ax_0_0)
+    ax_2_0.plot(distance,distance_per_stroke,color="g",marker="s",fillstyle="full",markerfacecolor="w")    
+    
+    if distance_per_stroke_bounds:
+        ax_2_0.set_ylim(distance_per_stroke_bounds[0],distance_per_stroke_bounds[1])
+    else:
+        ax_2_0.set_ylim(0,12)
+        
+    ax_2_1 = fig.add_subplot(gridspec[2,1],sharey=ax_2_0)
+    ax_2_1.hist(distance_per_stroke,bins=20,color="g",orientation='horizontal',range=(distance_per_stroke_bounds[0],distance_per_stroke_bounds[1]))
+    ax_2_1.axes.yaxis.set_visible(False)
+    
+    ax_0_0.set_xlim(distance[0],distance[-1])
+    ax_1_0.set_xlim(distance[0],distance[-1])
+    ax_2_0.set_xlim(distance[0],distance[-1])    
+    
+    ax_2_0.set_xlabel(r"Distance [ metres ]")
+    
+    ax_0_0.set_ylabel(r"Split (GPS) [ minutes : seconds ]",color="b",labelpad=10)
+    ax_1_0.set_ylabel(r"Stroke Rate [ strokes / minute ]" ,color="r",labelpad=10)
+    ax_2_0.set_ylabel(r"Disance Per Stroke [ metres ]"    ,color="g",labelpad=10)
     
     formatter = matplotlib.ticker.FuncFormatter(lambda s, x: time.strftime('%M:%S', time.gmtime(s)))
-    ax[0].yaxis.set_major_formatter(formatter)
+    ax_0_0.yaxis.set_major_formatter(formatter)
     
     fig.align_ylabels()
     
     session_datetime = ReadSessionDateTime(fname)
     session_savename = session_datetime.replace(":","").replace(" - "," ").replace(" ","_").lower() + "_analysis2.png"
     
-    ax[0].set_title(session_datetime)
+    ax_0_0.set_title(session_datetime)
     
     if save:
         savename = os.path.join(os.getcwd(),"session_graphs",session_savename)
@@ -460,18 +505,19 @@ def PlotGraphsVsDistance(fname,stroke_slice=None,split_bounds=None,stroke_rate_b
     
     return None
 
+
 #==============================================================================
 # For Lent Bumps M1 Day1
-# fname ="session_data/Toms Speedcoach 20230307 0427pm.csv"
-# stroke_slice = (3,-25)
+fname ="session_data/Toms Speedcoach 20230307 0427pm.csv"
+stroke_slice = (0,-25)
 
 # For Lent Bumps M1 Day2
 # fname ="session_data/Toms Speedcoach 20230309 0244pm.csv"
 # stroke_slice = None
 
 # For Lent Bumps M1 Day4
-fname ="session_data/Toms Speedcoach 20230311 0244pm.csv"
-stroke_slice = None
+# fname ="session_data/Toms Speedcoach 20230311 0244pm.csv"
+# stroke_slice = None
 
 #==============================================================================
 split_bounds                = (80,120)
@@ -479,8 +525,8 @@ stroke_rate_bounds          = (30,50)
 distance_per_stroke_bounds  = (0,12)
 #==============================================================================
 save=True
-GetStatisticsSummary(fname=fname,stroke_slice=stroke_slice)
-PlotGPS(fname=fname,stroke_slice=stroke_slice,save=save)
+# GetStatisticsSummary(fname=fname,stroke_slice=stroke_slice)
+# PlotGPS(fname=fname,stroke_slice=stroke_slice,save=save)
 PlotGraphsVsNStrokes(fname=fname,stroke_slice=stroke_slice,split_bounds=split_bounds,stroke_rate_bounds=stroke_rate_bounds,distance_per_stroke_bounds=distance_per_stroke_bounds,save=save)
 PlotGraphsVsDistance(fname=fname,stroke_slice=stroke_slice,split_bounds=split_bounds,stroke_rate_bounds=stroke_rate_bounds,distance_per_stroke_bounds=distance_per_stroke_bounds,save=save)
 #==============================================================================
