@@ -347,7 +347,7 @@ def PlotGraphsVsNStrokes(fname,stroke_slice=None,split_bounds=None,stroke_rate_b
     
     fig = plt.figure(figsize=(30,10),constrained_layout=True)
     
-    gridspec = fig.add_gridspec(nrows=3,ncols=2,height_ratios=[1,1,1], width_ratios=[1,0.1])
+    gridspec = fig.add_gridspec(nrows=3,ncols=2,height_ratios=[1,1,1], width_ratios=[1,0.12])
     
     
     ax_0_0 = fig.add_subplot(gridspec[0,0])
@@ -360,7 +360,7 @@ def PlotGraphsVsNStrokes(fname,stroke_slice=None,split_bounds=None,stroke_rate_b
         
     ax_0_1 = fig.add_subplot(gridspec[0,1],sharey=ax_0_0)
     ax_0_1.hist(split              ,bins=20,color="b",orientation='horizontal',range=(split_bounds[0],split_bounds[1]))
-    ax_0_1.axes.yaxis.set_visible(False)
+    # ax_0_1.axes.yaxis.set_visible(False)
         
     ax_1_0 = fig.add_subplot(gridspec[1,0],sharex=ax_0_0)
     ax_1_0.plot(total_strokes,stroke_rate        ,color="r",marker="s",fillstyle="full",markerfacecolor="w")
@@ -372,7 +372,7 @@ def PlotGraphsVsNStrokes(fname,stroke_slice=None,split_bounds=None,stroke_rate_b
         
     ax_1_1 = fig.add_subplot(gridspec[1,1],sharey=ax_1_0)
     ax_1_1.hist(stroke_rate        ,bins=20,color="r",orientation='horizontal',range=(stroke_rate_bounds[0],stroke_rate_bounds[1]))
-    ax_1_1.axes.yaxis.set_visible(False)
+    # ax_1_1.axes.yaxis.set_visible(False)
     
     ax_2_0 = fig.add_subplot(gridspec[2,0],sharex=ax_0_0)
     ax_2_0.plot(total_strokes,distance_per_stroke,color="g",marker="s",fillstyle="full",markerfacecolor="w")    
@@ -384,7 +384,8 @@ def PlotGraphsVsNStrokes(fname,stroke_slice=None,split_bounds=None,stroke_rate_b
         
     ax_2_1 = fig.add_subplot(gridspec[2,1],sharey=ax_2_0)
     ax_2_1.hist(distance_per_stroke,bins=20,color="g",orientation='horizontal',range=(distance_per_stroke_bounds[0],distance_per_stroke_bounds[1]))
-    ax_2_1.axes.yaxis.set_visible(False)
+    # ax_2_1.axes.yaxis.set_visible(False)
+    
     
     ax_0_0.set_xlim(total_strokes[0],total_strokes[-1])
     ax_1_0.set_xlim(total_strokes[0],total_strokes[-1])
@@ -437,7 +438,7 @@ def PlotGraphsVsDistance(fname,stroke_slice=None,split_bounds=None,stroke_rate_b
     
     fig = plt.figure(figsize=(30,10),constrained_layout=True)
     
-    gridspec = fig.add_gridspec(nrows=3,ncols=2,height_ratios=[1,1,1], width_ratios=[1,0.1])
+    gridspec = fig.add_gridspec(nrows=3,ncols=2,height_ratios=[1,1,1], width_ratios=[1,0.12])
     
     
     ax_0_0 = fig.add_subplot(gridspec[0,0])
@@ -450,8 +451,9 @@ def PlotGraphsVsDistance(fname,stroke_slice=None,split_bounds=None,stroke_rate_b
         
     ax_0_1 = fig.add_subplot(gridspec[0,1],sharey=ax_0_0)
     ax_0_1.hist(split              ,bins=20,color="b",orientation='horizontal',range=(split_bounds[0],split_bounds[1]))
-    ax_0_1.axes.yaxis.set_visible(False)
-        
+    # ax_0_1.axes.yaxis.set_visible(False)
+     
+    
     ax_1_0 = fig.add_subplot(gridspec[1,0],sharex=ax_0_0)
     ax_1_0.plot(distance,stroke_rate        ,color="r",marker="s",fillstyle="full",markerfacecolor="w")
     
@@ -462,7 +464,8 @@ def PlotGraphsVsDistance(fname,stroke_slice=None,split_bounds=None,stroke_rate_b
         
     ax_1_1 = fig.add_subplot(gridspec[1,1],sharey=ax_1_0)
     ax_1_1.hist(stroke_rate        ,bins=20,color="r",orientation='horizontal',range=(stroke_rate_bounds[0],stroke_rate_bounds[1]))
-    ax_1_1.axes.yaxis.set_visible(False)
+    # ax_1_1.axes.yaxis.set_visible(False)
+    
     
     ax_2_0 = fig.add_subplot(gridspec[2,0],sharex=ax_0_0)
     ax_2_0.plot(distance,distance_per_stroke,color="g",marker="s",fillstyle="full",markerfacecolor="w")    
@@ -474,7 +477,8 @@ def PlotGraphsVsDistance(fname,stroke_slice=None,split_bounds=None,stroke_rate_b
         
     ax_2_1 = fig.add_subplot(gridspec[2,1],sharey=ax_2_0)
     ax_2_1.hist(distance_per_stroke,bins=20,color="g",orientation='horizontal',range=(distance_per_stroke_bounds[0],distance_per_stroke_bounds[1]))
-    ax_2_1.axes.yaxis.set_visible(False)
+    # ax_2_1.axes.yaxis.set_visible(False)
+    
     
     ax_0_0.set_xlim(distance[0],distance[-1])
     ax_1_0.set_xlim(distance[0],distance[-1])
